@@ -56,19 +56,23 @@ h2{
 .role-mudur{color:#ffd700; font-weight:700}
 /* ⎋ MENÜ BUTONU — MODAL İÇİN UYUMLU */
 .menu-exit-btn{
-  position:fixed;         /* Ekrana sabitler */
-  top:16px;               /* Üstten biraz boşluk */
-  right:16px;             /* Sağdan biraz boşluk */
-  z-index:10000;          /* Modal üstünde görünsün */
-  padding:10px 14px;      /* Daha ergonomik iç boşluk */
-  border-radius:14px;     /* Daha yuvarlak */
-  font-size:14px;         /* Okunaklı yazı */
-  background:linear-gradient(135deg,#ff4d4d,#b30000); /* Arkaplan rengi */
-  color:#fff;             /* Yazı rengi */
-  border:none;            /* Çerçeve yok */
-  box-shadow:0 6px 20px rgba(255,0,0,0.55); /* Hafif gölge */
-  cursor:pointer;         /* Fare üzerine gelince pointer */
-  transition:transform 0.2s, box-shadow 0.2s; /* Hover animasyonu */
+  /* position:fixed;  ⚠ kaldırıldı */
+  /* top:16px; right:16px; ⚠ kaldırıldı */
+  z-index:10000;
+  padding:10px 14px;
+  border-radius:14px;
+  font-size:14px;
+  background:linear-gradient(135deg,#ff4d4d,#b30000); /* default renk */
+  color:#fff;
+  border:none;
+  box-shadow:0 6px 20px rgba(255,0,0,0.55);
+  cursor:pointer;
+  transition:transform 0.2s, box-shadow 0.2s;
+}
+
+.menu-exit-btn:hover{
+  transform:scale(1.08);
+  box-shadow:0 8px 24px rgba(255,0,0,0.65);
 }
 
 /* Hover efekti */
@@ -122,7 +126,19 @@ h2{
     ">Hayır</button>
   </div>
 </div>
-<button class="menu-exit-btn" onclick="showLogoutModal()">⎋</button>
+<!-- MENÜ BUTONLARI -->
+<div style="position:fixed; top:16px; right:16px; display:flex; gap:10px; z-index:10000;">
+  <button class="menu-exit-btn" onclick="showLogoutModal()">⎋ Çıkış</button>
+  <button class="menu-exit-btn" style="background:linear-gradient(135deg,#22c55e,#0d8f3c);" onclick="goDepo()">📦 Depo</button>
+</div>
+
+<script>
+// Depo sayfasına yönlendirme
+function goDepo(){
+  window.location.href = "depo.html";
+}
+</script>
+
 
 
 <h2>🕒 Onay Bekleyen Kullanıcılar</h2>
