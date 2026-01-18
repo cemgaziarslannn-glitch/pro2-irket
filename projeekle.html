@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Control Center</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+:root{
+  --bg:#060d14;
+  --panel:#0b1a27;
+  --card:#122536;
+  --accent:#1abc9c;
+  --danger:#ff6b6b;
+  --text:#eaf1f7;
+  --muted:#8fa3b8;
+  --border:#1f3447;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Inter,system-ui,Arial;
+  background:radial-gradient(circle at top,#0b1a27,#060d14);
+  color:var(--text)
+}
+.app{
+  max-width:1050px;
+  margin:auto;
+  padding:22px;
+  display:none; /* Başlangıçta gizli */
+}
+
+/* TOP */
+.top{
+  background:var(--panel);
+  border-radius:18px;
+  padding:18px;
+  display:grid;
+  grid-template-columns:2fr 1.5fr auto auto;
+  gap:10px;
+  box-shadow:0 25px 60px rgba(0,0,0,.4)
+}
+
+/* COMMON */
+input,select,button{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid var(--border);
+  background:#081828;
+  color:#fff;
+  font-size:14px
+}
+input:focus,select:focus{
+  outline:none;
+  border-color:var(--accent)
+}
+button{
+  cursor:pointer;
+  font-weight:600;
+  transition:.2s
+}
+.btn-main{background:var(--accent);color:#001;border:none}
+.btn-danger{
+  background:#1a0f14;
+  color:var(--danger);
+  border:1px solid #3a1f2a
+}
+.btn-danger:hover{background:var(--danger);color:#000}
+
+/* BODY */
+.section{margin-top:28px}
+.title{
+  font-size:18px;
+  font-weight:600;
+}
+.subtitle{
+  font-size:13px;
+  color:var(--muted);
+  margin-top:4px
+}
+
+/* LIST */
+.list{
+  margin-top:14px;
+}
+
+.person{
+  position:relative;
+  background:var(--card);
+  border-radius:14px;
+  padding:14px 16px;
+  margin-top:10px;
+  border:1px solid var(--border);
+}
+
+.person b{
+  font-weight:600;
+}
+
+.person span{
+  font-size:12px;
+  color:var(--muted);
+}
+
+/* ICON DELETE — MİNİK NOKTA */
+.icon-btn{
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:20px;
+  height:20px;
+  padding:0;
+  border:none;
+  border-radius:50%;
+  background:transparent;
+  color:var(--danger);
+  font-size:13px;
+  line-height:20px;
+  text-align:center;
+  cursor:pointer;
+  opacity:0.45;
+}
+
+.icon-btn:hover{
+  opacity:1;
+  background:var(--danger);
+  color:#000;
+}
+
+/* BOTTOM */
+.bottom{
+  position:sticky;
+  bottom:0;
+  margin-top:30px;
+  background:linear-gradient(to top,#060d14,transparent);
+  padding-top:14px
+}
+.add-card{
+  background:var(--panel);
+  border-radius:18px;
+  padding:16px;
+  display:grid;
+  grid-template-columns:2fr 1fr auto;
+  gap:10px;
+  box-shadow:0 15px 40px rgba(0,0,0,.35)
+}
+.warn{
+  font-size:12px;
+  color:var(--danger);
+  margin-top:6px
+}
+.menu-exit-btn{
+  position:fixed;         /* Ekrana sabitler */
+  top:12px;               /* Üstten boşluk */
+  right:12px;             /* Sağdan boşluk */
+  z-index:9999;           /* Her şeyin üstünde */
+  width:40px;             /* Kare boyut */
+  height:40px;            /* Kare boyut */
+  border-radius:50%;      /* Tam yuvarlak */
+  font-size:20px;         /* ⎋ sembolü büyük */
+  background:linear-gradient(135deg,#ff4d4d,#b30000);
+  color:#fff;
+  border:none;
+  box-shadow:0 6px 18px rgba(255,0,0,.5);
+  cursor:pointer;
+  display:flex;           /* ikon ortalanması için */
+  align-items:center;
+  justify-content:center;
+  padding:0;              /* padding kaldırıldı */
+}
+
+</style>
+</head>
+
+<body>
+<div class="app" id="app">
+
+  <!-- TOP -->
+  <div class="top">
+    <select id="projectSelect" onchange="loadProject()">
+      <option value="">Proje seç</option>
+    </select>
+
+    <input id="projectName" placeholder="Yeni proje adı">
+    <button class="btn-main" onclick="createProject()">Oluştur</button>
+    <button class="btn-danger" onclick="deleteProject()">Sil</button>
+  </div>
+
+  <!-- Menü butonunu TOP div dışına aldık -->
+  <button class="menu-exit-btn" onclick="goMenu()">⎋</button>
+
+  <!-- CENTER -->
+  <div class="section">
+    <div class="title" id="activeTitle">Proje seçilmedi</div>
+    <div class="subtitle">Seçili projenin personel durumu</div>
+    <div id="personnelList" class="list"></div>
+  </div>
+
+  <!-- ADD -->
+  <div class="bottom">
+    <div class="add-card">
+      <input id="pName" placeholder="Ad Soyad">
+      <input id="pTc" placeholder="TC (11 hane)">
+      <button class="btn-main" onclick="addPersonnel()">Ekle</button>
+    </div>
+    <div id="tcWarn" class="warn"></div>
+  </div>
+
+</div>
+
+<script>
+// FIREBASE
+firebase.initializeApp({
+  apiKey:"AIzaSyCye0QlekBFonTxfeBIlhLc9ia-mleyfUM",
+  authDomain:"denetleme-4d3d9.firebaseapp.com",
+  databaseURL:"https://denetleme-4d3d9-default-rtdb.firebaseio.com",
+  projectId:"denetleme-4d3d9"
+});
+const db=firebase.database();
+const auth=firebase.auth();
+
+// === AUTH KORUMASI ===
+auth.onAuthStateChanged(user=>{
+  if(!user){
+    alert("Giriş yapmanız gerekiyor");
+    location.replace("index.html");
+  } else {
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    alert("Giriş yapmanız gerekiyor");
+    location.replace("index.html");
+  } else {
+    // Kullanıcı giriş yapmış, sayfayı göster
+    document.getElementById("app").style.display = "block";
+  }
+});
+
+  }
+});
+
+// === SENİN MEVCUT ADMIN KODUN ===
+// LOAD PROJECTS
+function loadProjects(){
+  projectSelect.innerHTML='<option value="">Proje seç</option>';
+  db.ref("projects").once("value",s=>{
+    s.forEach(c=>{
+      const o=document.createElement("option");
+      o.value=c.key;
+      o.textContent=c.val().projectName;
+      projectSelect.appendChild(o);
+    });
+  });
+}
+loadProjects();
+
+// CREATE PROJECT
+function createProject(){
+  const name=projectName.value.trim();
+  if(!name) return;
+  const pid="PRJ_"+Date.now();
+  db.ref("projects/"+pid).set({projectName:name});
+  projectName.value="";
+  loadProjects();
+}
+
+// DELETE PROJECT
+function deleteProject(){
+  const pid=projectSelect.value;
+  if(!pid) return;
+  if(!confirm("Proje silinsin mi?")) return;
+  db.ref("projects/"+pid).remove();
+  activeTitle.textContent="Proje seçilmedi";
+  personnelList.innerHTML="";
+  loadProjects();
+}
+
+// LOAD PROJECT
+function loadProject(){
+  const pid=projectSelect.value;
+  if(!pid) return;
+
+  db.ref("projects/"+pid).once("value",s=>{
+    activeTitle.textContent=s.val().projectName;
+  });
+
+  personnelList.innerHTML="";
+  db.ref(`projects/${pid}/personnel`).once("value",s=>{
+    if(!s.exists()){
+      personnelList.innerHTML='<div class="subtitle">Personel yok</div>';
+      return;
+    }
+    s.forEach(c=>{
+      const tc=c.key;
+      db.ref("personnel/"+tc).once("value",ps=>{
+        const p=ps.val();
+        personnelList.innerHTML+=`
+          <div class="person">
+            <b>${p.adSoyad}</b><br>
+            <span>${tc}</span>
+            <button class="icon-btn" onclick="removePersonnel('${pid}','${tc}')">✕</button>
+          </div>`;
+      });
+    });
+  });
+}
+
+// TC CHECK
+pTc.oninput=()=>{
+  tcWarn.textContent=pTc.value.length!==11?"TC 11 haneli olmalı":"";
+};
+
+// ADD PERSONNEL
+function addPersonnel(){
+  const pid=projectSelect.value;
+  const ad=pName.value.trim();
+  const tc=pTc.value.trim();
+  if(!pid||!ad||tc.length!==11) return;
+
+  db.ref(`projects/${pid}/personnel/${tc}`).set(true);
+  db.ref(`personnel/${tc}`).update({tc,adSoyad:ad});
+  db.ref(`personnel/${tc}/projects/${pid}`).set(true);
+
+  pName.value="";pTc.value="";
+  loadProject();
+}
+
+// REMOVE PERSONNEL (AKILLI SİLME)
+function removePersonnel(pid,tc){
+  if(!confirm("Personel silinsin mi?")) return;
+
+  db.ref(`projects/${pid}/personnel/${tc}`).remove();
+  db.ref(`personnel/${tc}/projects/${pid}`).remove();
+
+  db.ref(`personnel/${tc}/projects`).once("value",snap=>{
+    if(!snap.exists()){
+      db.ref(`personnel/${tc}`).remove();
+    }
+  });
+
+  loadProject();
+}
+// MENÜ BUTONU
+function goMenu(){
+  window.location.href="menü.html";
+}
+
+</script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Denetleme Sistemi | Giriş</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;height:100%;overscroll-behavior:none;}
+body{
+  font-family:'Inter',sans-serif;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:18px;
+  background: radial-gradient(circle at top,#0a1a2e,#001026);
+  color:#e0e0e0;
+}
+
+/* CARD */
+.card{
+  width:100%;
+  max-width:400px;
+  padding:32px 28px;
+  border-radius:22px;
+  background:rgba(20,30,45,0.85);
+  backdrop-filter:blur(14px);
+  box-shadow:0 20px 60px rgba(0,0,0,0.8);
+  text-align:center;
+}
+
+/* LOCK ICON */
+.lock {
+  font-size:52px;
+  display:inline-block;
+  transition: transform 0.5s ease, color 0.5s ease;
+  margin-bottom:14px;
+}
+
+/* ANIMATIONS */
+.lock.error {
+  animation: lockShake 0.6s ease-in-out 2;
+  transform: scale(1.3) rotate(15deg);
+  color: #ff5555;
+}
+
+.lock.success {
+  color: #22c55e;
+  transform: scale(1.4) rotate(0deg);
+}
+
+@keyframes lockShake {
+  0% { transform: scale(1.3) rotate(15deg); }
+  25% { transform: scale(1.3) rotate(-15deg); }
+  50% { transform: scale(1.3) rotate(15deg); }
+  75% { transform: scale(1.3) rotate(-15deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+/* TITLE */
+h2{
+  margin:0 0 20px;
+  font-weight:800;
+  font-size:26px;
+  color:#7aaeff;
+}
+
+/* INPUT */
+input{
+  width:100%;
+  padding:16px 18px;
+  margin-top:14px;
+  border-radius:14px;
+  background:#0d1b2a;
+  border:1px solid #334155;
+  color:#e0e0e0;
+  font-size:15px;
+}
+input::placeholder{color:#9bb0c3;}
+
+/* BUTTON */
+button{
+  width:100%;
+  margin-top:24px;
+  padding:16px;
+  border:none;
+  border-radius:18px;
+  background:linear-gradient(135deg,#1f3b6f,#3f5fa3);
+  font-weight:700;
+  font-size:16px;
+  color:#e0e0e0;
+  cursor:pointer;
+  transition: background 0.3s ease;
+}
+button:hover{
+  background:linear-gradient(135deg,#3f5fa3,#1f3b6f);
+}
+
+/* LINKS */
+.bottom-actions{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin-top:20px;
+  font-size:13px;
+  white-space:nowrap;
+}
+.bottom-actions a{
+  color:#7aaeff;
+  text-decoration:none;
+  font-weight:600;
+}
+
+/* MESSAGE */
+.message{
+  margin-top:20px;
+  text-align:center;
+  font-weight:700;
+  font-size:14px;
+}
+.message.error{color:#ff5555}
+.message.success{color:#22c55e}
+
+/* FOOTER */
+.footer{
+  position:fixed;
+  right:12px;
+  bottom:12px;
+  font-size:11px;
+  color:#9bb0c3;
+  opacity:.7;
+  pointer-events:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <div id="lockIcon" class="lock">🔐</div>
+  <h2>Güvenli Giriş</h2>
+
+  <input id="email" type="email" placeholder="E-posta">
+  <input id="password" type="password" placeholder="Şifre">
+
+  <button onclick="login()">Giriş Yap</button>
+
+  <div class="bottom-actions">
+    <a href="kayit.html">➕ Yetkili Hesabı Oluştur</a>
+    <a href="#" onclick="resetPassword()">Şifremi Unuttum</a>
+  </div>
+
+  <div id="msg" class="message"></div>
+</div>
+
+<div class="footer">© CGA Güvenlik Sistemi</div>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyCye0QlekBFonTxfeBIlhLc9ia-mleyfUM",
+  authDomain: "denetleme-4d3d9.firebaseapp.com",
+  databaseURL: "https://denetleme-4d3d9-default-rtdb.firebaseio.com",
+  projectId: "denetleme-4d3d9",
+  storageBucket: "denetleme-4d3d9.appspot.com",
+  messagingSenderId: "584625735764",
+  appId: "1:584625735764:web:5889dcaadb69c4c78f45c1"
+});
+
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+const emailInput = document.getElementById("email");
+const passwordInput = document.getElementById("password");
+const msg = document.getElementById("msg");
+const lockIcon = document.getElementById("lockIcon");
+
+firebase.auth().onAuthStateChanged(user => {
+  if(user){
+    emailInput.value = user.email;
+    lockIcon.textContent = "🔒";
+  }
+});
+
+function show(text,type="error"){
+  msg.textContent=text;
+  msg.className="message "+type;
+}
+
+function login(){
+  const mail = emailInput.value.trim();
+  const pass = passwordInput.value;
+
+  if(!mail || !pass){
+    show("E-posta ve şifre giriniz");
+    lockIcon.className = "lock error";
+    return;
+  }
+
+  // Reset
+  lockIcon.className = "lock";
+  lockIcon.textContent = "🔒";
+  lockIcon.style.color = "#e0e0e0";
+
+  firebase.auth().signInWithEmailAndPassword(mail, pass)
+    .then(res => firebase.database().ref("users/" + res.user.uid).once("value"))
+    .then(snap => {
+      if(!snap.exists() || !snap.val().approved){
+        show("Admin onayı bekleniyor");
+        firebase.auth().signOut();
+        lockIcon.className = "lock error";
+        return;
+      }
+
+      const role = snap.val().role;
+
+      if(role !== "admin" && role !== "müdür"){
+        show("Bu sayfaya giriş yetkiniz yok");
+        firebase.auth().signOut();
+        lockIcon.className = "lock error";
+        return;
+      }
+
+      // Başarılı giriş → sadece tik
+      lockIcon.textContent = "✔️";
+      lockIcon.className = "lock success";
+      show(`Giriş başarılı (${role})`,"success");
+      localStorage.setItem("canEnterApp","yes");
+
+      setTimeout(()=>{
+        if(role === "müdür") location.replace("menü.html");
+        else if(role === "admin") location.replace("tekadmin.html");
+      },700);
+
+    })
+    .catch(()=>{
+      show("E-posta veya şifre hatalı");
+      lockIcon.className = "lock error";
+    });
+}
+
+function resetPassword(){
+  const mail=emailInput.value.trim();
+  if(!mail){
+    show("E-posta giriniz");
+    return;
+  }
+  firebase.auth().sendPasswordResetEmail(mail)
+    .then(()=> show("Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.","success"))
+    .catch(()=> show("Bu e-posta bulunamadı"));
+}
+</script>
+
+</body>
+</html>

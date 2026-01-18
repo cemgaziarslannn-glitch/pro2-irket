@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>👑 Admin Panel | Denetici Yönetimi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body{
+ margin:0;
+ padding:30px;
+ background:#050914;
+ font-family:'Segoe UI',system-ui;
+ color:#fff;
+ display:none; /* Sayfa gizli başta */
+}
+h2{
+ color:#00e5ff;
+ margin:30px 0 15px;
+}
+.user{
+ background:linear-gradient(135deg,#1b2445,#202c5a);
+ padding:18px;
+ border-radius:18px;
+ margin-bottom:14px;
+ display:flex;
+ justify-content:space-between;
+ align-items:center;
+ box-shadow:0 20px 40px rgba(0,0,0,.5);
+}
+.info{line-height:1.5}
+.info b{font-size:15px}
+.info span{font-size:13px;opacity:.8}
+
+.actions button{
+ margin-left:8px;
+ padding:10px 16px;
+ border:none;
+ border-radius:14px;
+ font-weight:800;
+ cursor:pointer;
+}
+
+.approve{background:linear-gradient(135deg,#00e5ff,#6a5cff)}
+.delete{background:linear-gradient(135deg,#ff3c3c,#ff0066)}
+/* ⎋ MENÜ BUTONU */
+.menu-exit-btn{
+ position:fixed;         /* Ekrana sabitler */
+ top:12px;               /* Üstten 12px boşluk */
+ right:12px;             /* Sağdan 12px boşluk */
+ z-index:9999;           /* Her şeyin üstünde görünür */
+ padding:8px 12px;       /* İç boşluk */
+ border-radius:12px;     /* Köşeleri yuvarlatır */
+ font-size:13px;         /* Yazı boyutu */
+ background:linear-gradient(135deg,#ff4d4d,#b30000); /* Arkaplan rengi */
+ color:#fff;             /* Yazı rengi */
+ border:none;            /* Çerçeve yok */
+ box-shadow:0 6px 18px rgba(255,0,0,.5); /* Hafif gölge */
+ cursor:pointer;         /* Fare üzerine gelince pointer */
+}
+
+</style>
+</head>
+
+<body>
+<button class="menu-exit-btn" onclick="goMenu()">⎋</button>
+
+<h2>🕒 Onay Bekleyen Denetçiler</h2>
+<div id="pending"></div>
+
+<h2>🛡️ Mevcut Denetçiler</h2>
+<div id="approved"></div>
+
+<script>
+firebase.initializeApp({
+ apiKey: "AIzaSyCye0QlekBFonTxfeBIlhLc9ia-mleyfUM",
+ authDomain: "denetleme-4d3d9.firebaseapp.com",
+ databaseURL: "https://denetleme-4d3d9-default-rtdb.firebaseio.com",
+ projectId: "denetleme-4d3d9",
+ storageBucket: "denetleme-4d3d9.appspot.com",
+ messagingSenderId: "584625735764",
+ appId: "1:584625735764:web:5889dcaadb69c4c78f45c1"
+});
+
+const db = firebase.database();
+const auth = firebase.auth();
+
+// === AUTH KORUMASI ===
+auth.onAuthStateChanged(user => {
+  if(!user){
+    alert("Giriş yapmanız gerekiyor");
+    location.replace("login.html");
+  } else {
+    db.ref("users/"+user.uid).once("value").then(snap => {
+      if(!snap.exists() || !snap.val().approved){
+        alert("Admin onayı bekleniyor");
+        auth.signOut();
+        location.replace("login.html");
+        return;
+      }
+
+      // Opsiyonel: rol kontrolü
+      const role = snap.val().role;
+      if(role !== "admin" && role !== "müdür"){
+        alert("Bu sayfayı görüntüleme yetkiniz yok");
+        auth.signOut();
+        location.replace("login.html");
+        return;
+      }
+
+      // Yetkili kullanıcı, sayfayı göster
+      document.body.style.display = "block";
+    });
+  }
+});
+
+/* 🔵 ONAY BEKLEYENLER (SADECE DENETÇİLER) */
+db.ref("users")
+.orderByChild("approved")
+.equalTo(false)
+.on("value", snap => {
+ const box = document.getElementById("pending");
+ box.innerHTML = "";
+
+ if(!snap.exists()){
+  box.innerHTML = "<p>🎉 Onay bekleyen yok</p>";
+  return;
+ }
+
+ snap.forEach(u=>{
+  const d = u.val();
+  if(d.role !== "denetici") return;
+
+  box.innerHTML += `
+   <div class="user">
+    <div class="info">
+     <b>${d.fullName||"İsimsiz"}</b><br>
+     <span>${d.email||"E-posta yok"}</span>
+    </div>
+    <div class="actions">
+     <button class="approve" onclick="approve('${u.key}')">✅ Onayla</button>
+     <button class="delete" onclick="removeUser('${u.key}')">❌ Sil</button>
+    </div>
+   </div>
+  `;
+ });
+});
+
+/* 🟢 MEVCUT DENETÇİLER (SADECE ONAYLI DENETÇİLER) */
+db.ref("users")
+.orderByChild("role")
+.equalTo("denetici")
+.on("value", snap => {
+ const box = document.getElementById("approved");
+ box.innerHTML = "";
+
+ if(!snap.exists()){
+  box.innerHTML = "<p>Henüz denetici yok</p>";
+  return;
+ }
+
+ let bulundu = false;
+ snap.forEach(u => {
+  const d = u.val();
+  if(d.approved !== true) return;  
+
+  bulundu = true;
+  box.innerHTML += `
+   <div class="user">
+    <div class="info">
+     <b>${d.fullName}</b><br>
+     <span>${d.email}</span>
+    </div>
+    <div class="actions">
+     <button class="delete" onclick="removeUser('${u.key}')">❌ Sil</button>
+    </div>
+   </div>
+  `;
+ });
+
+ if(!bulundu){
+  box.innerHTML = "<p>Onaylı denetici yok</p>";
+ }
+});
+
+/* 🔧 İŞLEVLER */
+function approve(uid){
+ if(!confirm("Kullanıcı denetici olarak onaylansın mı?")) return;
+ db.ref("users/"+uid).update({
+  approved:true,
+  role:"denetici",
+  approvedAt:Date.now()
+ });
+}
+
+function removeUser(uid){
+ if(!confirm("⚠️ Bu kullanıcı TAMAMEN silinecek. Devam?")) return;
+ db.ref("users/"+uid).remove().then(()=>{
+  alert("🗑️ Kullanıcı sistemden tamamen silindi");
+ });
+}
+// MENÜ BUTONU
+function goMenu(){
+  window.location.href="menü.html";
+}
+</script>
+
+</body>
+</html>
