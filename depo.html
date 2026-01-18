@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>Firebase Kullanım Durumu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+  padding: 20px;
+  display: none; /* Başlangıçta gizli, login sonrası gösterilecek */
+}
+.card {
+  background: #020617;
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 480px;
+  margin: auto;
+}
+h2 { margin-bottom: 10px; }
+.progress {
+  background: #1e293b;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 22px;
+}
+.progress-bar {
+  height: 100%;
+  width: 0%;
+  background: #22c55e;
+  transition: 0.4s;
+}
+.warn { background: #f59e0b !important; }
+.danger { background: #ef4444 !important; }
+.stat {
+  margin-top: 8px;
+  font-size: 14px;
+}
+.small {
+  opacity: 0.7;
+  font-size: 12px;
+  margin-top: 10px;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h2>📦 Firebase Kullanım Durumu</h2>
+
+  <div class="progress">
+    <div id="bar" class="progress-bar"></div>
+  </div>
+
+  <div class="stat">Kullanılan: <b id="used">0</b> MB</div>
+  <div class="stat">Kalan: <b id="remaining">0</b> MB</div>
+  <div class="stat">Doluluk: <b id="percent">0</b> %</div>
+
+  <div class="small">
+    * Tahmini hesap (%90–95 doğruluk)
+  </div>
+</div>
+
+<script>
+// 🔥 FIREBASE BAĞLANTISI
+firebase.initializeApp({
+  apiKey: "AIzaSyCye0QlekBFonTxfeBIlhLc9ia-mleyfUM",
+  authDomain: "denetleme-4d3d9.firebaseapp.com",
+  databaseURL: "https://denetleme-4d3d9-default-rtdb.firebaseio.com",
+  projectId: "denetleme-4d3d9"
+});
+
+const db = firebase.database();
+const auth = firebase.auth();
+
+// 🔐 SAYFA GÜVENLİĞİ: Sadece giriş yapmış kullanıcılar görebilir
+auth.onAuthStateChanged(user => {
+  if (!user) {
+    // Giriş yoksa login sayfasına yönlendir
+    window.location.href = "index.html"; // kendi login sayfan
+  } else {
+    // Giriş varsa sayfayı göster
+    document.body.style.display = "block";
+    initFirebaseUsage();
+  }
+});
+
+// 🔢 yardımcılar
+function estimateSize(obj) {
+  return new Blob([JSON.stringify(obj)]).size;
+}
+function bytesToMB(bytes) {
+  return bytes / 1024 / 1024;
+}
+
+const LIMIT_MB = 1024; // Spark limiti
+let totalBytes = 0;
+
+// 👤 PERSONNEL + FOTO
+function initFirebaseUsage() {
+  db.ref("personnel").once("value")
+  .then(snap => {
+    snap.forEach(p => {
+      const d = p.val();
+      totalBytes += estimateSize(d);
+      if (d.photoBase64) {
+        totalBytes += Math.round((d.photoBase64.length * 3) / 4);
+      }
+    });
+    return db.ref("projects").once("value");
+  })
+  .then(snap => {
+    totalBytes += estimateSize(snap.val() || {});
+    return db.ref("denetimler").once("value");
+  })
+  .then(snap => {
+    totalBytes += estimateSize(snap.val() || {});
+
+    const usedMB = bytesToMB(totalBytes);
+    const percent = Math.min((usedMB / LIMIT_MB) * 100, 100);
+
+    document.getElementById("used").innerText = usedMB.toFixed(2);
+    document.getElementById("remaining").innerText = (LIMIT_MB - usedMB).toFixed(2);
+    document.getElementById("percent").innerText = percent.toFixed(1);
+
+    const bar = document.getElementById("bar");
+    bar.style.width = percent + "%";
+
+    if (percent >= 90) bar.classList.add("danger");
+    else if (percent >= 75) bar.classList.add("warn");
+  })
+  .catch(err => alert("Hata: " + err.message));
+}
+</script>
+
+</body>
+</html>
